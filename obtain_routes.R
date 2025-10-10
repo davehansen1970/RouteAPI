@@ -37,7 +37,7 @@ get_route <- function(origin, destination, intermediate = NULL) {
       routingPreference = "TRAFFIC_AWARE",
       computeAlternativeRoutes = FALSE,
       languageCode = "en-US",
-      units = "METRIC"
+      units = "IMPERIAL"
     )
   } else {
     request_body <- list(
@@ -48,7 +48,7 @@ get_route <- function(origin, destination, intermediate = NULL) {
       routingPreference = "TRAFFIC_AWARE",
       computeAlternativeRoutes = FALSE,
       languageCode = "en-US",
-      units = "METRIC"
+      units = "IMPERIAL"
     )
   }
   
@@ -84,120 +84,17 @@ get_route <- function(origin, destination, intermediate = NULL) {
   )
 }
 
-jnd_olbrich <- get_route(origin = "JND_at_North_Shore",
-                         destination = "Olbrich_boat_launch",
-                         intermediate = "Willy_at_Ingersoll")
-
-jnd_milwaukee <- get_route(origin = "JND_at_North_Shore",
-                           destination = "E_Wash_at_Milwaukee",
-                           intermediate = "E_Wash_at_First")
-jnd_milwaukee_willy <- get_route(origin = "JND_at_North_Shore",
-                                 intermediate = "Willy_at_Ingersoll",
-                                 destination = "E_Wash_at_Milwaukee")
-
-olbrich_jnd <- get_route(origin = "Olbrich_boat_launch",
-                         destination = "JND_at_North_Shore",
-                         intermediate = "Willy_at_Ingersoll")
-
-milwaukee_jnd <- get_route(destination = "JND_at_North_Shore",
-                           origin = "E_Wash_at_Milwaukee",
-                           intermediate = "E_Wash_at_First")
-
-milwaukee_jnd_willy <- get_route(destination = "JND_at_North_Shore",
-                                 origin = "E_Wash_at_Milwaukee",
-                                 intermediate = "Willy_at_Ingersoll")
-
-hairball_eastwood <- get_route(origin = "Wilson_at_Willy",
-                               destination = "Eastwood_at_Winnebago",
-                               intermediate = "Willy_at_Ingersoll")
-eastwood_hairball <- get_route(destination = "Wilson_at_Willy",
-                               origin = "Eastwood_at_Winnebago",
-                               intermediate = "Willy_at_Ingersoll")
 rimrock_hairball <- get_route(origin = "JND_at_Rimrock",
-                              destination = "Wilson_at_Willy"
+                              destination = "Wilson_at_Willy",
+                              intermediate = "JND_at_North_Shore")
+hairball_rimrock <- get_route(origin = "Wilson_at_Willy",
+                              destination = "JND_at_Rimrock",
                               intermediate = "JND_at_North_Shore")
 
 full_routes <- bind_rows(
   full_routes_pre,
-  jnd_olbrich,
-  jnd_milwaukee_willy,
-  jnd_milwaukee,
-  olbrich_jnd,
-  milwaukee_jnd,
-  milwaukee_jnd_willy,
-  hairball_eastwood,
-  eastwood_hairball,
-  rimrock_hairball
+  rimrock_hairball,
+  hairball_rimrock
 )
 
 full_routes |> write_csv(file = "data/data_raw.csv")
-
-# basic data cleaning and variable creation
-full_routes_clean <- full_routes |>
-  filter(!(
-    origin == "JND_at_North_Shore" &
-      destination == "Willy_at_Ingersoll"
-  )) |>
-  mutate(
-    route_id = case_when(
-      origin == "JND_at_North_Shore" &
-        destination == "Olbrich_boat_launch" &
-        intermediate == "Willy_at_Ingersoll" ~ "JND to Olbrich",
-      origin == "Olbrich_boat_launch" &
-        destination == "JND_at_North_Shore" &
-        intermediate == "Willy_at_Ingersoll" ~ "Olbrich to JND",
-      origin == "E_Wash_at_Milwaukee" &
-        destination == "JND_at_North_Shore" &
-        intermediate == "E_Wash_at_First" ~ "Milwaukee to JND via E Wash",
-      destination == "E_Wash_at_Milwaukee" &
-        origin == "JND_at_North_Shore" &
-        intermediate == "E_Wash_at_First" ~ "JND to Milwaukee via E Wash",
-      origin == "E_Wash_at_Milwaukee" &
-        destination == "JND_at_North_Shore" &
-        intermediate == "Willy_at_Ingersoll" ~ "Milwaukee to JND via Willy",
-      destination == "E_Wash_at_Milwaukee" &
-        origin == "JND_at_North_Shore" &
-        intermediate == "Willy_at_Ingersoll" ~ "JND to Milwaukee via Willy",
-      destination == "Wilson_at_Willy" &
-        origin == "Eastwood_at_Winnebago" &
-        intermediate == "Willy_at_Ingersoll" ~ "Eastwood to Hairball",
-      origin == "Wilson_at_Willy" &
-        destination == "Eastwood_at_Winnebago" &
-        intermediate == "Willy_at_Ingersoll" ~ "Hairball to Eastwood",
-      origin == "JND_at_Rimrock" &
-        destination == "Wilson_at_Willy" &
-        intermediate == "JND_at_North_Shore" ~ "JND from Rimrock to Willy via North Shore"
-    ),
-    duration = as.integer(str_remove(duration, "s")),
-    duration_minutes = duration / 60,
-    static_duration = as.integer(str_remove(static_duration, "s")),
-    traffic_delay = duration - static_duration,
-    direction = case_match(
-      route_id,
-      c(
-        "JND to Olbrich",
-        "JND to Milwaukee via E Wash",
-        "JND to Milwaukee via Willy",
-        "Hairball to Eastwood"
-      ) ~ "EB",
-      .default = "WB"
-    ),
-    day_of_week = wday(request_time, label = TRUE),
-    weekend = ifelse(day_of_week %in% c("Sat", "Sun"), TRUE, FALSE),
-    rush_hour = case_when(
-      !weekend &
-        (hour(request_time) == 7 |
-           (
-             hour(request_time) == 8 & minute(request_time) <= 30
-           )) ~ "am",!weekend &
-        (hour(request_time) == 16 |
-           (
-             hour(request_time) == 17 & minute(request_time) <= 30
-           )) ~ "pm",
-      .default = NA
-    )
-  ) |>
-  filter(!is.na(route_id))
-
-saveRDS(full_routes_clean, file = "data/data_clean.RDS")
-write_csv(full_routes_clean, file = "data/data_clean.csv")
