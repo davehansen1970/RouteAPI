@@ -21,7 +21,8 @@ OD <- list(
   "E_Wash_at_Milwaukee" = "EjdFIFdhc2hpbmd0b24gQXZlICYgTWlsd2F1a2VlIFN0LCBNYWRpc29uLCBXSSA1MzcwNCwgVVNBImYiZAoUChIJUc7xKnFUBogRwRIyIhvYO_MSFAoSCVHO8SpxVAaIEcESMiIb2DvzGhQKEglb_GtKEVQGiBGDTq5ArHySmxoUChIJ384s9rVWBogRKuqY4yFj-BEiCg2_lLAZFXd5vso",
   "E_Wash_at_First" = "EjVFIFdhc2hpbmd0b24gQXZlICYgTiBGaXJzdCBTdCwgTWFkaXNvbiwgV0kgNTM3MDQsIFVTQSJmImQKFAoSCeMnhbmBUwaIEYkYcoZtUER5EhQKEgnjJ4W5gVMGiBGJGHKGbVBEeRoUChIJW_xrShFUBogRg06uQKx8kpsaFAoSCcmDLdWBUwaIEbdQz9fubXyjIgoNklqvGRUY4LzK",
   "Wilson_at_Willy" = "EjNFIFdpbHNvbiBTdCAmIFdpbGxpYW1zb24gU3QsIE1hZGlzb24sIFdJIDUzNzAzLCBVU0EiZiJkChQKEgnhym9La1MGiBGcY9ohN_QfmhIUChIJ4cpvS2tTBogRnGPaITf0H5oaFAoSCfVVbLltUwaIEeqhwVpfun4hGhQKEglPeRB0cVMGiBFitNgo4xgGjSIKDdbmrBkVlla6yg",
-  "Eastwood_at_Winnebago" = "EjJFYXN0d29vZCBEciAmIFdpbm5lYmFnbyBTdCwgTWFkaXNvbiwgV0kgNTM3MDQsIFVTQSJmImQKFAoSCeNrPLqDUwaIEffZcIG93NP9EhQKEgnjazy6g1MGiBH32XCBvdzT_RoUChIJ9SfChYZTBogRf5DI8zHQBHYaFAoSCVkZZw6HUwaIESCTKdLOYzU9IgoNnNiuGRW5G73K"
+  "Eastwood_at_Winnebago" = "EjJFYXN0d29vZCBEciAmIFdpbm5lYmFnbyBTdCwgTWFkaXNvbiwgV0kgNTM3MDQsIFVTQSJmImQKFAoSCeNrPLqDUwaIEffZcIG93NP9EhQKEgnjazy6g1MGiBH32XCBvdzT_RoUChIJ9SfChYZTBogRf5DI8zHQBHYaFAoSCVkZZw6HUwaIESCTKdLOYzU9IgoNnNiuGRW5G73K",
+  "JND_at_Rimrock" = "EjJKb2huIE5vbGVuIERyICYgUmltcm9jayBSZCwgTWFkaXNvbiwgV0kgNTM3MTMsIFVTQSJmImQKFAoSCfv79lbvUgaIEd-bxOlXat-ZEhQKEgn7-_ZW71IGiBHfm8TpV2rfmRoUChIJjfKfA-BSBogRYsWXJvaejFUaFAoSCUkcKUuVUgaIEf66KRm-lS1iIgoN02eoGRXbjLrK"
 )
 
 
@@ -112,6 +113,9 @@ hairball_eastwood <- get_route(origin = "Wilson_at_Willy",
 eastwood_hairball <- get_route(destination = "Wilson_at_Willy",
                                origin = "Eastwood_at_Winnebago",
                                intermediate = "Willy_at_Ingersoll")
+rimrock_hairball <- get_route(origin = "JND_at_Rimrock",
+                              destination = "Wilson_at_Willy"
+                              intermediate = "JND_at_North_Shore")
 
 full_routes <- bind_rows(
   full_routes_pre,
@@ -122,7 +126,8 @@ full_routes <- bind_rows(
   milwaukee_jnd,
   milwaukee_jnd_willy,
   hairball_eastwood,
-  eastwood_hairball
+  eastwood_hairball,
+  rimrock_hairball
 )
 
 full_routes |> write_csv(file = "data/data_raw.csv")
@@ -158,7 +163,10 @@ full_routes_clean <- full_routes |>
         intermediate == "Willy_at_Ingersoll" ~ "Eastwood to Hairball",
       origin == "Wilson_at_Willy" &
         destination == "Eastwood_at_Winnebago" &
-        intermediate == "Willy_at_Ingersoll" ~ "Hairball to Eastwood"
+        intermediate == "Willy_at_Ingersoll" ~ "Hairball to Eastwood",
+      origin == "JND_at_Rimrock" &
+        destination == "Wilson_at_Willy" &
+        intermediate == "JND_at_North_Shore" ~ "JND from Rimrock to Willy via North Shore"
     ),
     duration = as.integer(str_remove(duration, "s")),
     duration_minutes = duration / 60,
